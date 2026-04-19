@@ -105,7 +105,14 @@ def run_pipeline():
 @app.route('/enrich', methods=['POST'])
 def enrich_endpoint():
     results = run_pipeline()
-    return jsonify({'count': len(results), 'results': results})
+    average_confidence = 0
+    if results:
+        average_confidence = sum(r.get('confidence', 0) for r in results) / len(results)
+    return jsonify({
+        'count': len(results),
+        'average_confidence': round(average_confidence, 2),
+        'results': results,
+    })
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ Flask webhook pipeline that enriches inbound leads using the Hunter.io domain se
 - Enriches with Hunter.io domain search API
 - Falls back to mock enrichment when API key is missing
 - Stores enriched leads in SQLite (`leads.db`)
+- Tracks enrichment confidence scores
 - Webhook endpoint: `POST /enrich`
 
 ## Setup
