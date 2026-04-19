@@ -27,7 +27,8 @@ def init_db():
             domain TEXT,
             email TEXT,
             confidence INTEGER,
-            enriched_at TEXT
+            enriched_at TEXT,
+            UNIQUE(name, company, domain)
         )
         '''
     )
@@ -68,7 +69,12 @@ def enrich_lead(lead):
 def upsert_lead(conn, lead, enrichment):
     cur = conn.cursor()
     cur.execute(
-        'INSERT INTO leads (name, company, domain, email, confidence, enriched_at) VALUES (?, ?, ?, ?, ?, ?)',
+        '''
+        INSERT INTO leads (name, company, domain, email, confidence, enriched_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(name, company, domain)
+        DO UPDATE SET email=excluded.email, confidence=excluded.confidence, enriched_at=excluded.enriched_at
+        ''',
         (
             lead['name'],
             lead['company'],
