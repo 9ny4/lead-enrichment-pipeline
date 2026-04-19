@@ -1,22 +1,27 @@
+import logging
 import os
 import csv
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import requests
 from flask import Flask, jsonify
 
 load_dotenv()
 
-DB_PATH = os.getenv('DB_PATH', 'leads.db')
-HUNTER_API_KEY = os.getenv('HUNTER_API_KEY')
 HUNTER_API_URL = 'https://api.hunter.io/v2/domain-search'
+
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 
+def _db_path() -> str:
+    return os.getenv('DB_PATH', 'leads.db')
+
+
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_db_path())
     cur = conn.cursor()
     cur.execute(
         '''
@@ -42,18 +47,28 @@ def read_leads(path='sample_leads.csv'):
 
 
 def enrich_lead(lead):
-    if not HUNTER_API_KEY:
+    api_key = os.getenv('HUNTER_API_KEY')
+    if not api_key:
         return {
             'email': f"info@{lead['domain']}",
             'confidence': 55,
         }
 
-    response = requests.get(
-        HUNTER_API_URL,
-        params={'domain': lead['domain'], 'api_key': HUNTER_API_KEY},
-        timeout=15,
-    )
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            HUNTER_API_URL,
+            params={'domain': lead['domain'], 'api_key': api_key},
+            timeout=15,
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "Hunter.io request failed for domain '%s': %s",
+            lead.get('domain'),
+            exc,
+        )
+        return {'email': None, 'confidence': 0}
+
     data = response.json().get('data', {})
     emails = data.get('emails', [])
     if not emails:
@@ -81,7 +96,7 @@ def upsert_lead(conn, lead, enrichment):
             lead['domain'],
             enrichment.get('email'),
             enrichment.get('confidence'),
-            datetime.utcnow().isoformat(),
+            datetime.now(timezone.utc).isoformat(),
         ),
     )
     conn.commit()
@@ -90,7 +105,7 @@ def upsert_lead(conn, lead, enrichment):
 def run_pipeline():
     init_db()
     leads = read_leads()
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_db_path())
 
     results = []
     for lead in leads:
