@@ -1,6 +1,17 @@
 # lead-enrichment-pipeline
 
-Flask webhook pipeline that enriches inbound leads using the Hunter.io domain search API (or a mock fallback) and stores results in SQLite.
+Turn inbound leads into usable contacts automatically, so sales can follow up faster without manual research.
+Enrich leads with Hunter.io and persist the results in SQLite for a lightweight pipeline that’s easy to run and demo.
+
+## How It Works
+
+1. Webhook receives lead
+2. Hunter.io enriches it
+3. SQLite stores the result
+
+## Demo
+
+Screenshot coming soon
 
 ## Features
 
